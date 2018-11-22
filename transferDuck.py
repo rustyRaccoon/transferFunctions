@@ -135,14 +135,46 @@ def bodeFromTF(showTF, *args):
     combinedTF = sympy_to_LTI(combinedTF)
     w, mag, phase = signal.bode(combinedTF)
     
+    global wList, magList, phaseList
+    wList, magList, phaseList = list(w), list(mag), list(phase)
+    
     plt.figure(figsize=(10,8))
     plt.subplot(211)
     plt.semilogx(w, mag) # Bode magnitude plot
+    #plt.axvline(cutoff, color='green') # cutoff frequency
+    plt.margins(0, 0.1)
+    plt.title('Filter frequency response')
+    plt.ylabel('Amplitude [dB]')
+    plt.grid(which='both', axis='both')
     plt.subplot(212)
     plt.semilogx(w, phase) # Bode phase plot
+    plt.margins(0, 0.1)
+    plt.xlabel('Frequency [radians / second]')
+    plt.ylabel('Phase [°]')
+    plt.grid(which='both', axis='both')
     plt.show()
     
     return combinedTF
 
 #----------------------------------------------------------------------
-main()
+def computeTF(order, cutoff, filterType=None):
+    # Default filter type is low
+    if filterType == None:
+        filterType = 'low'    
+
+    # Get filter numerator and denominator
+    num, den = signal.butter(order, cutoff, filterType, analog = True)
+    
+    # Convert to linear time invariant
+    LTI = signal.lti(num,den)
+    
+    #Show plots 'n shit
+    bodeFromTF(True, LTI)
+
+#----------------------------------------------------------------------
+def findCutoff(w, mag):
+        print("nope")
+    
+#----------------------------------------------------------------------
+#main()
+computeTF(2,994718.39)
