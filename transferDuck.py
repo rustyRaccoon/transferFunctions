@@ -6,6 +6,7 @@ Created on Tue Nov 20 09:02:03 2018
 """
 
 # Import libraries and whatnot
+from scipy import pi
 from scipy import signal
 import matplotlib.pyplot as plt
 import sympy as sy
@@ -18,14 +19,17 @@ init_printing()
 
 def main():
     # CALL FUNCTIONS HERE
-    #LTI_1 = signal.lti([67471590909091],[1,7954545.4545455,39062500000000])
-    #LTI_2 = signal.lti([269230769230770],[1,3076923.0769231,100000000000000])
-    #LTI_3 = signal.lti([1.9375,0,0],[1,107323.23232323,10203040506.071])
-    LTI_4 = signal.lti([1.725], [2.56e-14, 2.0368e-7, 1])
+    LTI_1 = signal.lti([67471590909091],
+                       [1, 7954545.4545455, 39062500000000])
+    LTI_2 = signal.lti([269230769230770],
+                       [1, 3076923.0769231, 100000000000000])
+    LTI_3 = signal.lti([1.9375, 0, 0],
+                       [1, 107323.23232323, 10203040506.071])
+    # LTI_4 = signal.lti([1.725], [2.56e-14, 2.0368e-7, 1])
 
-    pig = bodeFromTF(LTI_4)
+    pig = bodeFromTF(LTI_1, LTI_2, LTI_3)
     evalPoly(pig, printList=True)
-    #getButter(2,994718.39)
+    # getButter(2,994718.39)
 # ----------------------------------------------------------------------
 
 
@@ -81,27 +85,30 @@ def evalPoly(polynomial, variable='s', printList=None):
     # Iterate once more than order (2nd order polynom means 3 iterations)
     for iterator in range(lim+1):
         # Split item into coefficient and power
-        item = num[iterator].split("*" + variable)
+        try:
+            item = num[iterator].split("*" + variable)
 
-        # If there is a power term ...
-        if len(item) > 1:
-            # ... remove ** from current item power
-            curItemPower = item[1].replace("**", "")
-            # ... get current power that we should be at:
-            # (limit - already performed iterations)
-            curIterPower = str(lim-len(coeffNum))
+            # If there is a power term ...
+            if len(item) > 1:
+                # ... remove ** from current item power
+                curItemPower = item[1].replace("**", "")
+                # ... get current power that we should be at:
+                # (limit - already performed iterations)
+                curIterPower = str(lim-len(coeffNum))
 
-            # If entries match or the coefficient is not empty ...
-            if curItemPower == curIterPower or not item[0] == '':
-                # ... add coefficient to list
-                coeffNum.append(item[0])
-            # else add 0 to the list
+                # If entries match or the coefficient is not empty ...
+                if curItemPower == curIterPower or not item[0] == '':
+                    # ... add coefficient to list
+                    coeffNum.append(item[0])
+                # else add 0 to the list
+                else:
+                    coeffNum.append("0")
+            # else add the coefficient right away (last coefficient)
             else:
-                coeffNum.append("0")
-        # else add the coefficient right away (last coefficient)
-        else:
-            if not item[0] == '':
-                coeffNum.append(item[0])
+                if not item[0] == '':
+                    coeffNum.append(item[0])
+        except:
+            coeffNum.append("0")
 
     # If there is term with a variable ...
     if not den[0].find("*") == -1:
@@ -112,28 +119,31 @@ def evalPoly(polynomial, variable='s', printList=None):
 
     # Iterate once more than order (2nd order polynom means 3 iterations)
     for iterator in range(lim+1):
-        # Split item into coefficient and power
-        item = den[iterator].split("*" + variable)
+        try:
+            # Split item into coefficient and power
+            item = den[iterator].split("*" + variable)
 
-        # If there is a power term ...
-        if len(item) > 1:
-            # ... remove ** from current item power
-            curItemPower = item[1].replace("**", "")
-            # ... get current power that we should be at:
-            # (limit - already performed iterations)
-            curIterPower = str(lim-len(coeffDen))
+            # If there is a power term ...
+            if len(item) > 1:
+                # ... remove ** from current item power
+                curItemPower = item[1].replace("**", "")
+                # ... get current power that we should be at:
+                # (limit - already performed iterations)
+                curIterPower = str(lim-len(coeffDen))
 
-            # If entries match or the coefficient is not empty ...
-            if curItemPower == curIterPower or not item[0] == '':
-                # ... add coefficient to list
-                coeffDen.append(item[0])
-            # else add 0 to the list
+                # If entries match or the coefficient is not empty ...
+                if curItemPower == curIterPower or not item[0] == '':
+                    # ... add coefficient to list
+                    coeffDen.append(item[0])
+                # else add 0 to the list
+                else:
+                    coeffDen.append("0")
+            # else add the coefficient right away (last coefficient)
             else:
-                coeffDen.append("0")
-        # else add the coefficient right away (last coefficient)
-        else:
-            if not item[0] == '':
-                coeffDen.append(item[0])
+                if not item[0] == '':
+                    coeffDen.append(item[0])
+        except:
+            coeffNum.append("0")
 
     # Create empty list to return
     coefficients = []
@@ -235,16 +245,20 @@ def bodeFromTF(*args):
     combinedTF = sympy_to_LTI(combinedTF)
     # Get data for bode plot
     w, mag, phase = signal.bode(combinedTF)
+    # Change to Hz instead of rad/s
+    w = w/(2*pi)
 
     # Find cutoff freqeuncy and print it
-    cutoff = findCutoff(list(w), list(mag))
-    print("Cutoff frequency: ", cutoff)
+    cutHigh, cutLow = findCutoff(list(w), list(mag))
+    print("Lower cutoff frequency: ", cutLow)
+    print("Upper cutoff frequency: ", cutHigh)
 
     # Set up plot
     plt.figure(figsize=(10, 8))  # Create new figure
     plt.subplot(211)  # Create new subplot
     plt.semilogx(w, mag)  # Bode magnitude plot
-    plt.axvline(cutoff, color='green')  # cutoff frequency plot
+    plt.axvline(cutLow, color='green')  # cutoff frequency plot
+    plt.axvline(cutHigh, color='green')  # cutoff frequency plot
     plt.margins(0, 0.1)  # Set margins
     plt.title('Filter frequency response')  # Set figure title
     plt.ylabel('Amplitude [dB]')  # Set label for y axis
@@ -252,7 +266,7 @@ def bodeFromTF(*args):
     plt.subplot(212)  # Create new subplot
     plt.semilogx(w, phase)  # Bode phase plot
     plt.margins(0, 0.1)  # Set margins
-    plt.xlabel('Frequency [radians / second]')  # Set label for x axis
+    plt.xlabel('Frequency [degrees]')  # Set label for x axis
     plt.ylabel('Phase [°]')  # Set lavel for y axis
     plt.grid(which='both', axis='both')  # Activate grid for both axis
     plt.show()  # Show plot
@@ -310,19 +324,20 @@ def findCutoff(w, mag):
         cutoff frequency in Hz
     """
 
+    # Find index of max value
+    maxIndex = mag.index(max(mag))
+
     # Create dummy variables
     sum = 0
     movingAvg = 0
+    items = 0
 
     # Loop through collection of magnitudes
-    for value in mag:
-        # Calculate sum of already passed magnitudes
-        sum = sum + value
-        # Calculate average value of already passed magnitudes
-        movingAvg = sum / (mag.index(value)+1)
+    for i in range(maxIndex, len(mag)):
+        value = mag[i]
 
         # If difference of average and value greater 3 dB ...
-        if(movingAvg - value) > 3:
+        if (movingAvg - value) > 3:
             # ... keep track of the index
             index = mag.index(value)
             # Calculate slope using current point and the point before
@@ -330,11 +345,46 @@ def findCutoff(w, mag):
             # Calculate constant term
             c = mag[index] - w[index] * slope
             # Calculate cutoff frequency from linear equation
-            cutoff = (-3 - c) / slope
+            cutoffUpper = (mag[index-1] - 3 - c) / slope
             # Exit loop
             break
+
+        # Calculate sum of already passed magnitudes
+        sum = sum + value
+        items += 1
+        # Calculate average value of already passed magnitudes
+        movingAvg = sum / items
+
+    # Reset dummy variables
+    sum = 0
+    movingAvg = 0
+    items = 0
+
+    # Loop through collection of magnitudes
+    for i in range(maxIndex, 0, -1):
+        value = mag[i]
+
+        # If difference of average and value greater 3 dB ...
+        if (movingAvg - value) > 3:
+            # ... keep track of the index
+            index = mag.index(value)
+            # Calculate slope using current point and the point before
+            slope = (mag[index] - mag[index+1]) / (w[index] - w[index+1])
+            # Calculate constant term
+            c = mag[index] - w[index] * slope
+            # Calculate cutoff frequency from linear equation
+            cutoffLower = (mag[index+1] - 3 - c) / slope
+            # Exit loop
+            break
+
+        # Calculate sum of already passed magnitudes
+        sum = sum + value
+        items += 1
+        # Calculate average value of already passed magnitudes
+        movingAvg = sum / items
+
     # Return cutoff frequency
-    return cutoff
+    return cutoffUpper, cutoffLower
 # ----------------------------------------------------------------------
 
 
